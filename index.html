@@ -22,9 +22,7 @@
           <p>ファイルから取り込んで再生</p>
         </div>
       </div>
-
       <button id="importBtn" class="primary">ファイルから取り込む</button>
-      <!-- iPhoneでMP3がグレーアウトする問題を避けるため、accept指定を外しています -->
       <input id="filePicker" type="file" multiple hidden />
     </header>
 
@@ -46,12 +44,19 @@
         <span id="voiceLamp" class="voice-lamp" aria-hidden="true"></span>
       </div>
       <p id="voiceStatus" class="voice-status">停止中</p>
-      <p id="voiceTranscript" class="voice-transcript">開始後は「次」「前」「停止」または曲名だけで操作できます</p>
+      <p id="voiceTranscript" class="voice-transcript"></p>
       <div class="voice-actions">
         <button id="voiceStartBtn" class="voice-start">🎤 音声運転モードを開始</button>
         <button id="voiceStopBtn" class="secondary" disabled>停止</button>
       </div>
-      <p class="voice-help">対応：「次」「前」「停止」「再生」「シャッフル」または曲名。呼びかけ語は不要です。最初の開始操作は停車中に行ってください。</p>
+    </section>
+
+    <section class="playlist-panel">
+      <div class="list-head">
+        <h2>再生リスト</h2>
+        <button id="createPlaylistBtn" class="primary compact">＋ 新規作成</button>
+      </div>
+      <div id="playlistList" class="playlist-list"></div>
     </section>
 
     <section class="toolbar">
@@ -69,6 +74,18 @@
       <div id="songList" class="song-list"></div>
     </section>
   </main>
+
+  <dialog id="playlistDialog">
+    <form method="dialog" class="dialog-card">
+      <h2 id="playlistDialogTitle">再生リストを作成</h2>
+      <input id="playlistNameInput" type="text" placeholder="再生リスト名" maxlength="40" />
+      <div id="playlistSongChoices" class="playlist-choices"></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">キャンセル</button>
+        <button id="savePlaylistBtn" value="default" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="./app.js"></script>
 </body>
