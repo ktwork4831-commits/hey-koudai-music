@@ -263,6 +263,8 @@ let recognition = null;
 let voiceModeEnabled = false;
 let recognitionRunning = false;
 let shuffleMode = false;
+let lastVoiceCommandAt = 0;
+let lastVoiceCommandKey = "";
 
 function normalizeVoiceText(text){
   return String(text || "")
@@ -324,67 +326,97 @@ function findSongFromVoice(request){
   }) || null;
 }
 
+function isNextCommand(command){
+  const exact = ["次", "つぎ", "次へ", "つぎへ", "次の曲", "つぎのきょく", "次お願い", "次にして"];
+  if(exact.some(word => command === normalizeVoiceText(word))) return true;
+  return command.includes("次の曲") || command.startsWith("次へ") || command.startsWith("つぎへ");
+}
+
+function isPreviousCommand(command){
+  const exact = ["前", "まえ", "前へ", "まえへ", "前の曲", "まえのきょく", "前お願い", "前にして"];
+  if(exact.some(word => command === normalizeVoiceText(word))) return true;
+  return command.includes("前の曲") || command.startsWith("前へ") || command.startsWith("まえへ");
+}
+
+function commandWasJustHandled(key){
+  const now = Date.now();
+  if(lastVoiceCommandKey === key && now - lastVoiceCommandAt < 1600) return true;
+  lastVoiceCommandKey = key;
+  lastVoiceCommandAt = now;
+  return false;
+}
+
 function executeVoiceCommand(rawCommand){
   const command = normalizeVoiceText(rawCommand);
-  if(!command) return;
+  if(!command) return false;
 
   setVoiceState("命令を実行中", `認識：${rawCommand}`, "command");
 
-  if(["次", "つぎ", "次へ", "次の曲"].some(word => command === normalizeVoiceText(word)) || command.includes("次の曲")){
-    if(nextSong()) speakFeedback("次の曲を再生します");
-    else speakFeedback("曲がありません");
-    return;
+  if(isNextCommand(command)){
+    if(commandWasJustHandled("next")) return true;
+    if(nextSong()) setVoiceState("待機中", "次の曲へ進みました", "listening");
+    else setVoiceState("待機中", "曲がありません", "listening");
+    return true;
   }
 
-  if(["前", "まえ", "前へ", "前の曲"].some(word => command === normalizeVoiceText(word)) || command.includes("前の曲")){
-    if(previousSong()) speakFeedback("前の曲を再生します");
-    else speakFeedback("曲がありません");
-    return;
+  if(isPreviousCommand(command)){
+    if(commandWasJustHandled("previous")) return true;
+    if(previousSong()) setVoiceState("待機中", "前の曲へ戻りました", "listening");
+    else setVoiceState("待機中", "曲がありません", "listening");
+    return true;
   }
 
   if(["止めて", "停止", "一時停止", "ストップ"].some(word => command.includes(normalizeVoiceText(word)))){
+    if(commandWasJustHandled("pause")) return true;
     player.pause();
-    speakFeedback("停止しました");
-    return;
+    setVoiceState("待機中", "停止しました", "listening");
+    return true;
   }
 
   if(["再生", "再生して", "続き", "続けて", "スタート"].some(word => command === normalizeVoiceText(word))){
+    if(commandWasJustHandled("play")) return true;
     player.play()
-      .then(() => speakFeedback("再生します"))
-      .catch(() => speakFeedback("再生できませんでした"));
-    return;
+      .then(() => setVoiceState("待機中", "再生しました", "listening"))
+      .catch(() => setVoiceState("待機中", "再生できませんでした", "listening"));
+    return true;
   }
 
   if(command.includes("シャッフル")){
+    if(commandWasJustHandled("shuffle")) return true;
     shuffleMode = true;
-    if(nextSong()) speakFeedback("シャッフル再生します");
-    else speakFeedback("曲がありません");
-    return;
+    if(nextSong()) setVoiceState("待機中", "シャッフル再生しました", "listening");
+    else setVoiceState("待機中", "曲がありません", "listening");
+    return true;
   }
 
   if(command.includes("順番") || command.includes("シャッフル解除")){
+    if(commandWasJustHandled("ordered")) return true;
     shuffleMode = false;
-    speakFeedback("順番再生に戻します");
-    return;
+    setVoiceState("待機中", "順番再生に戻しました", "listening");
+    return true;
   }
 
-  // 音声モード中は、曲名だけを話しても再生する。
-  // 将来プレイリスト機能を追加した際も、ここで名前を照合できる構造にしている。
   const song = findSongFromVoice(command);
   if(song){
+    if(commandWasJustHandled(`song:${song.id}`)) return true;
     playSong(song.id);
-    speakFeedback(`${song.title}を再生します`);
     setVoiceState("待機中", `再生：${song.title}`, "listening");
-  }else{
-    speakFeedback("曲が見つかりませんでした");
-    setVoiceState("待機中", `見つかりません：${rawCommand}`, "listening");
+    return true;
   }
+
+  setVoiceState("待機中", `認識した言葉：${rawCommand}`, "listening");
+  return false;
 }
 
-function processVoiceText(text){
-  voiceTranscript.textContent = `認識：${text}`;
-  // 音声運転モードがONなら、呼びかけ語なしでそのまま命令として処理する。
-  executeVoiceCommand(text);
+function processVoiceAlternatives(alternatives){
+  const texts = alternatives.filter(Boolean);
+  if(!texts.length) return;
+  voiceTranscript.textContent = `認識候補：${texts.join(" / ")}`;
+
+  // iPhoneが「次」を別表記で認識することがあるため、候補を順番に試す。
+  for(const text of texts){
+    if(executeVoiceCommand(text)) return;
+  }
 }
 
 function startRecognition(){
@@ -406,7 +438,7 @@ function setupRecognition(){
   recognition = new SpeechRecognitionAPI();
   recognition.lang = "ja-JP";
   recognition.continuous = true;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
   recognition.maxAlternatives = 3;
 
   recognition.onstart = () => {
@@ -416,8 +448,24 @@ function setupRecognition(){
 
   recognition.onresult = event => {
     const latest = event.results[event.results.length - 1];
-    const best = latest[0]?.transcript || "";
-    if(best) processVoiceText(best);
+    const alternatives = [];
+    for(let i = 0; i < latest.length; i++){
+      alternatives.push(latest[i]?.transcript || "");
+    }
+
+    // 確定結果を優先。短い基本操作は途中結果でも反応を試す。
+    if(latest.isFinal){
+      processVoiceAlternatives(alternatives);
+      return;
+    }
+
+    const interim = alternatives[0] || "";
+    const normalized = normalizeVoiceText(interim);
+    if(isNextCommand(normalized) || isPreviousCommand(normalized)){
+      processVoiceAlternatives([interim]);
+    }else if(interim){
+      voiceTranscript.textContent = `聞き取り中：${interim}`;
+    }
   };
 
   recognition.onerror = event => {
