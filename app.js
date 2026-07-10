@@ -262,8 +262,6 @@ const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechReco
 let recognition = null;
 let voiceModeEnabled = false;
 let recognitionRunning = false;
-let waitingForCommand = false;
-let commandTimer = null;
 let shuffleMode = false;
 
 function normalizeVoiceText(text){
@@ -271,8 +269,8 @@ function normalizeVoiceText(text){
     .toLowerCase()
     .normalize("NFKC")
     .replace(/[、。,.!?！？\s]/g, "")
-    .replace(/hey/g, "へい")
-    .replace(/ヘイ/g, "へい");
+    .replace(/曲を/g, "")
+    .replace(/音楽を/g, "");
 }
 
 function setVoiceState(status, transcript="", mode="idle"){
@@ -313,7 +311,7 @@ function previousSong(){
 
 function findSongFromVoice(request){
   const cleaned = normalizeVoiceText(request)
-    .replace(/を?(再生して|再生|流して|かけて|聞かせて|聴かせて)$/g, "")
+    .replace(/(を)?(再生して|再生|流して|かけて|聞かせて|聴かせて)$/g, "")
     .replace(/(の曲|曲)$/g, "");
   if(!cleaned) return null;
 
@@ -330,25 +328,33 @@ function executeVoiceCommand(rawCommand){
   const command = normalizeVoiceText(rawCommand);
   if(!command) return;
 
-  if(command.includes("次の曲") || command === "次" || command.includes("つぎ")){
+  setVoiceState("命令を実行中", `認識：${rawCommand}`, "command");
+
+  if(["次", "つぎ", "次へ", "次の曲"].some(word => command === normalizeVoiceText(word)) || command.includes("次の曲")){
     if(nextSong()) speakFeedback("次の曲を再生します");
     else speakFeedback("曲がありません");
     return;
   }
-  if(command.includes("前の曲") || command === "前" || command.includes("まえの曲")){
+
+  if(["前", "まえ", "前へ", "前の曲"].some(word => command === normalizeVoiceText(word)) || command.includes("前の曲")){
     if(previousSong()) speakFeedback("前の曲を再生します");
     else speakFeedback("曲がありません");
     return;
   }
-  if(command.includes("止めて") || command.includes("停止") || command.includes("一時停止")){
+
+  if(["止めて", "停止", "一時停止", "ストップ"].some(word => command.includes(normalizeVoiceText(word)))){
     player.pause();
     speakFeedback("停止しました");
     return;
   }
-  if(command === "再生" || command.includes("再生して") || command.includes("続き")){
-    player.play().then(() => speakFeedback("再生します")).catch(() => speakFeedback("再生できませんでした"));
+
+  if(["再生", "再生して", "続き", "続けて", "スタート"].some(word => command === normalizeVoiceText(word))){
+    player.play()
+      .then(() => speakFeedback("再生します"))
+      .catch(() => speakFeedback("再生できませんでした"));
     return;
   }
+
   if(command.includes("シャッフル")){
     shuffleMode = true;
     if(nextSong()) speakFeedback("シャッフル再生します");
@@ -356,11 +362,19 @@ function executeVoiceCommand(rawCommand){
     return;
   }
 
+  if(command.includes("順番") || command.includes("シャッフル解除")){
+    shuffleMode = false;
+    speakFeedback("順番再生に戻します");
+    return;
+  }
+
+  // 音声モード中は、曲名だけを話しても再生する。
+  // 将来プレイリスト機能を追加した際も、ここで名前を照合できる構造にしている。
   const song = findSongFromVoice(command);
   if(song){
     playSong(song.id);
     speakFeedback(`${song.title}を再生します`);
-    setVoiceState("待機中", `認識：${rawCommand}`, "listening");
+    setVoiceState("待機中", `再生：${song.title}`, "listening");
   }else{
     speakFeedback("曲が見つかりませんでした");
     setVoiceState("待機中", `見つかりません：${rawCommand}`, "listening");
@@ -368,34 +382,9 @@ function executeVoiceCommand(rawCommand){
 }
 
 function processVoiceText(text){
-  const normalized = normalizeVoiceText(text);
   voiceTranscript.textContent = `認識：${text}`;
-  const wakeWords = ["へいこうだい", "へいこーだい", "へいこうたい"];
-  const matchedWakeWord = wakeWords.find(word => normalized.includes(word));
-
-  if(matchedWakeWord){
-    const command = normalized.split(matchedWakeWord).slice(1).join("");
-    clearTimeout(commandTimer);
-    if(command){
-      waitingForCommand = false;
-      executeVoiceCommand(command);
-    }else{
-      waitingForCommand = true;
-      setVoiceState("命令を聞いています", "はい。8秒以内に話してください", "command");
-      speakFeedback("はい");
-      commandTimer = setTimeout(() => {
-        waitingForCommand = false;
-        setVoiceState("待機中", "「ヘイこうだい」と呼びかけてください", "listening");
-      }, 8000);
-    }
-    return;
-  }
-
-  if(waitingForCommand){
-    waitingForCommand = false;
-    clearTimeout(commandTimer);
-    executeVoiceCommand(normalized);
-  }
+  // 音声運転モードがONなら、呼びかけ語なしでそのまま命令として処理する。
+  executeVoiceCommand(text);
 }
 
 function startRecognition(){
@@ -422,7 +411,7 @@ function setupRecognition(){
 
   recognition.onstart = () => {
     recognitionRunning = true;
-    setVoiceState("待機中", "「ヘイこうだい」と呼びかけてください", waitingForCommand ? "command" : "listening");
+    setVoiceState("待機中", "「次」「前」「停止」または曲名を話してください", "listening");
   };
 
   recognition.onresult = event => {
@@ -460,8 +449,6 @@ voiceStartBtn.onclick = () => {
 
 voiceStopBtn.onclick = () => {
   voiceModeEnabled = false;
-  waitingForCommand = false;
-  clearTimeout(commandTimer);
   if(recognitionRunning) recognition.stop();
   voiceStartBtn.disabled = false;
   voiceStopBtn.disabled = true;
