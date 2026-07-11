@@ -18,7 +18,26 @@
   function keepMusicVolume() {
     if (!player) return;
     player.muted = false;
-    player.volume = 1;
+  }
+
+  function setPlayerVolume(value) {
+    if (!player) return;
+    const next = Math.max(0, Math.min(1, value));
+    player.muted = false;
+    player.volume = next;
+    localStorage.setItem("simple-music-volume", String(next));
+  }
+
+  function announceVolume() {
+    if (!player) return;
+    setVoiceState("待機中", `音量：${Math.round(player.volume * 100)}%`, "listening");
+  }
+
+  function changeVolume(delta) {
+    if (!player) return true;
+    setPlayerVolume(player.volume + delta);
+    announceVolume();
+    return true;
   }
 
   function stopDrivingModeByVoice() {
@@ -27,6 +46,14 @@
     voiceStartBtn.disabled = false;
     voiceStopBtn.disabled = true;
     setVoiceState("停止中", "運転モードを停止しました");
+  }
+
+  function startDrivingModeByVoice() {
+    voiceModeEnabled = true;
+    voiceStartBtn.disabled = true;
+    voiceStopBtn.disabled = false;
+    startRecognition();
+    setVoiceState("待機中", "運転モードを開始しました", "listening");
   }
 
   function setRandomPlayback(enabled) {
@@ -94,20 +121,91 @@
     return false;
   }
 
+  function handleVolumeCommand(command) {
+    if (command.includes("ミュート解除") || command.includes("消音解除")) {
+      player.muted = false;
+      announceVolume();
+      return true;
+    }
+
+    if (command.includes("ミュート") || command.includes("消音")) {
+      player.muted = true;
+      setVoiceState("待機中", "ミュートしました", "listening");
+      return true;
+    }
+
+    if (command.includes("音量最大") || command.includes("最大音量") || command.includes("音量マックス") || command.includes("ボリューム最大")) {
+      setPlayerVolume(1);
+      announceVolume();
+      return true;
+    }
+
+    if (command.includes("音量半分") || command.includes("半分") || command.includes("ボリューム半分")) {
+      setPlayerVolume(0.5);
+      announceVolume();
+      return true;
+    }
+
+    if (command.includes("音量ゼロ") || command.includes("音量0") || command.includes("ボリュームゼロ")) {
+      setPlayerVolume(0);
+      announceVolume();
+      return true;
+    }
+
+    if (
+      command.includes("音量上げ") ||
+      command.includes("音量あげ") ||
+      command.includes("音大きく") ||
+      command.includes("大きくして") ||
+      command.includes("ボリューム上げ") ||
+      command.includes("ボリュームあげ")
+    ) {
+      return changeVolume(0.15);
+    }
+
+    if (
+      command.includes("音量下げ") ||
+      command.includes("音量さげ") ||
+      command.includes("音小さく") ||
+      command.includes("小さくして") ||
+      command.includes("ボリューム下げ") ||
+      command.includes("ボリュームさげ")
+    ) {
+      return changeVolume(-0.15);
+    }
+
+    return false;
+  }
+
   executeVoiceCommand = raw => {
     keepMusicVolume();
     const command = normalized(raw);
+
+    if (
+      command.includes("運転モード開始") ||
+      command.includes("運転モードを開始") ||
+      command.includes("音声モード開始") ||
+      command.includes("マイクオン") ||
+      command.includes("マイクをオン")
+    ) {
+      startDrivingModeByVoice();
+      return true;
+    }
 
     if (
       command.includes("運転モード停止") ||
       command.includes("運転モードを停止") ||
       command.includes("音声モード停止") ||
       command.includes("音声停止") ||
-      command.includes("マイク停止")
+      command.includes("マイク停止") ||
+      command.includes("マイクオフ") ||
+      command.includes("マイクをオフ")
     ) {
       stopDrivingModeByVoice();
       return true;
     }
+
+    if (handleVolumeCommand(command)) return true;
 
     if (
       command.includes("ランダム解除") ||
@@ -131,11 +229,15 @@
     return originalExecuteVoiceCommand(raw);
   };
 
-  if (voiceStartBtn) voiceStartBtn.addEventListener("click", keepMusicVolume);
+  if (voiceStartBtn) voiceStartBtn.addEventListener("click", () => {
+    keepMusicVolume();
+    const savedVolume = Number(localStorage.getItem("simple-music-volume"));
+    if (Number.isFinite(savedVolume)) setPlayerVolume(savedVolume);
+  });
+
   if (player) {
+    const savedVolume = Number(localStorage.getItem("simple-music-volume"));
+    if (Number.isFinite(savedVolume)) setPlayerVolume(savedVolume);
     player.addEventListener("play", keepMusicVolume);
-    player.addEventListener("volumechange", () => {
-      if (voiceModeEnabled && player.volume < 1) player.volume = 1;
-    });
   }
 })();
