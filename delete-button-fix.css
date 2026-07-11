@@ -14,10 +14,10 @@
 }
 
 .icon.danger.del::before {
-  content: "削除";
+  content: "🗑";
   display: block;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
@@ -32,7 +32,7 @@
   }
 
   .icon.danger.del::before {
-    font-size: 10px;
+    font-size: 17px;
   }
 }
 
@@ -44,6 +44,6 @@
   }
 
   .icon.danger.del::before {
-    font-size: 10px;
+    font-size: 16px;
   }
 }
