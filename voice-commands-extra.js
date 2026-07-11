@@ -52,24 +52,58 @@
     voiceModeEnabled = true;
     voiceStartBtn.disabled = true;
     voiceStopBtn.disabled = false;
+    primeFirstSongForVoice();
     startRecognition();
     setVoiceState("待機中", "運転モードを開始しました", "listening");
+  }
+
+  function prepareSongSource(id) {
+    const song = songs.find(item => item.id === id);
+    if (!song) return false;
+
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(song.file);
+    player.src = currentObjectUrl;
+    nowTitle.textContent = song.title;
+    currentId = song.id;
+    activeQueue = activeQueue.length ? activeQueue : songs.map(item => item.id);
+    activeQueueIndex = activeQueue.indexOf(song.id);
+    if (activeQueueIndex < 0) activeQueueIndex = 0;
+    render();
+    return true;
+  }
+
+  function primeFirstSongForVoice() {
+    if (!player || player.src || currentId || !songs.length) return;
+    const firstId = songs[0].id;
+    prepareSongSource(firstId);
+
+    const wasMuted = player.muted;
+    player.muted = true;
+    player.play()
+      .then(() => {
+        player.pause();
+        player.currentTime = 0;
+        player.muted = wasMuted;
+      })
+      .catch(() => {
+        player.muted = wasMuted;
+      });
   }
 
   function resumePlayback() {
     keepMusicVolume();
 
-    if (player.src) {
-      player.play().catch(() => {});
-      setVoiceState("待機中", "再生しました", "listening");
-      return true;
+    if (!player.src) {
+      const queue = activeQueue.length ? activeQueue : songs.map(item => item.id);
+      const nextId = queue[activeQueueIndex >= 0 ? activeQueueIndex : 0] || songs[0]?.id;
+      if (nextId) prepareSongSource(nextId);
     }
 
-    const queue = activeQueue.length ? activeQueue : songs.map(item => item.id);
-    const nextId = queue[activeQueueIndex >= 0 ? activeQueueIndex : 0] || songs[0]?.id;
-    if (nextId) {
-      playSong(nextId, queue.length ? queue : null);
-      setVoiceState("待機中", "再生しました", "listening");
+    if (player.src) {
+      player.play()
+        .then(() => setVoiceState("待機中", "再生しました", "listening"))
+        .catch(() => setVoiceState("待機中", "画面の再生ボタンを一度押してください", "listening"));
       return true;
     }
 
@@ -259,6 +293,7 @@
     keepMusicVolume();
     const savedVolume = Number(localStorage.getItem("simple-music-volume"));
     if (Number.isFinite(savedVolume)) setPlayerVolume(savedVolume);
+    primeFirstSongForVoice();
   });
 
   if (player) {
