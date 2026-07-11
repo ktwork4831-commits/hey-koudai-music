@@ -1,4 +1,4 @@
-const CACHE_NAME = "simple-music-import-noaccept-v12";
+const CACHE_NAME = "simple-music-import-noaccept-v13";
 const ASSETS = [
   "./",
   "./index.html",
