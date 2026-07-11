@@ -258,6 +258,17 @@
     return false;
   }
 
+  function isNextVoiceCommand(command) {
+    return [
+      "次", "つぎ", "次へ", "つぎへ", "次の曲", "つぎの曲", "次お願い", "次にして",
+      "ネクスト", "ねくすと", "next", "nextsong", "nexttrack"
+    ].some(word => command === normalized(word) || command.includes(normalized(word)));
+  }
+
+  function isPreviousVoiceCommand(command) {
+    return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"].some(word => command === normalized(word) || command.includes(normalized(word)));
+  }
+
   function isResumeCommand(command) {
     return ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"].some(word => command.includes(normalized(word)));
   }
@@ -287,6 +298,18 @@
       command.includes("マイクをオフ")
     ) {
       stopDrivingModeByVoice();
+      return true;
+    }
+
+    if (isNextVoiceCommand(command)) {
+      nextSong();
+      setVoiceState("待機中", "次の曲へ進みました", "listening");
+      return true;
+    }
+
+    if (isPreviousVoiceCommand(command)) {
+      previousSong();
+      setVoiceState("待機中", "前の曲へ戻りました", "listening");
       return true;
     }
 
