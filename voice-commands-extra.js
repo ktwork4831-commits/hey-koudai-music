@@ -56,6 +56,27 @@
     setVoiceState("待機中", "運転モードを開始しました", "listening");
   }
 
+  function resumePlayback() {
+    keepMusicVolume();
+
+    if (player.src) {
+      player.play().catch(() => {});
+      setVoiceState("待機中", "再生しました", "listening");
+      return true;
+    }
+
+    const queue = activeQueue.length ? activeQueue : songs.map(item => item.id);
+    const nextId = queue[activeQueueIndex >= 0 ? activeQueueIndex : 0] || songs[0]?.id;
+    if (nextId) {
+      playSong(nextId, queue.length ? queue : null);
+      setVoiceState("待機中", "再生しました", "listening");
+      return true;
+    }
+
+    setVoiceState("待機中", "再生できる曲がありません", "listening");
+    return true;
+  }
+
   function setRandomPlayback(enabled) {
     shuffleMode = enabled;
     localStorage.setItem("simple-music-shuffle", String(enabled));
@@ -177,6 +198,10 @@
     return false;
   }
 
+  function isResumeCommand(command) {
+    return ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"].some(word => command.includes(normalized(word)));
+  }
+
   executeVoiceCommand = raw => {
     keepMusicVolume();
     const command = normalized(raw);
@@ -225,6 +250,7 @@
     }
 
     if (playLooseNamedItem(raw)) return true;
+    if (isResumeCommand(command)) return resumePlayback();
 
     return originalExecuteVoiceCommand(raw);
   };
