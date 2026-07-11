@@ -1,0 +1,28 @@
+.icon.danger.del {
+  position: relative;
+  font-size: 0;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.icon.danger.del::before {
+  content: "×";
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 700px) {
+  .icon.danger.del::before {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 390px) {
+  .icon.danger.del::before {
+    font-size: 20px;
+  }
+}
