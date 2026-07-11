@@ -15,28 +15,29 @@
       .trim();
   }
 
-  function keepMusicVolume() {
-    if (!player) return;
-    player.muted = false;
+  function keepMusicAudible() {
+    if (player) player.muted = false;
   }
 
-  function setPlayerVolume(value) {
-    if (!player) return;
-    const next = Math.max(0, Math.min(1, value));
-    player.muted = false;
-    player.volume = next;
-    localStorage.setItem("simple-music-volume", String(next));
+  function setShuffleMode(enabled) {
+    shuffleMode = enabled;
+    localStorage.setItem("simple-music-shuffle", String(enabled));
   }
 
-  function announceVolume() {
-    if (!player) return;
-    setVoiceState("待機中", `音量：${Math.round(player.volume * 100)}%`, "listening");
-  }
-
-  function changeVolume(delta) {
+  function setLoopPlayback(enabled) {
     if (!player) return true;
-    setPlayerVolume(player.volume + delta);
-    announceVolume();
+    player.loop = enabled;
+    localStorage.setItem("simple-music-loop-one", String(enabled));
+    setVoiceState("待機中", enabled ? "ループ再生 ON" : "ループ再生 OFF", "listening");
+    return true;
+  }
+
+  function startDrivingModeByVoice() {
+    voiceModeEnabled = true;
+    voiceStartBtn.disabled = true;
+    voiceStopBtn.disabled = false;
+    startRecognition();
+    setVoiceState("待機中", "運転モードを開始しました", "listening");
     return true;
   }
 
@@ -46,15 +47,7 @@
     voiceStartBtn.disabled = false;
     voiceStopBtn.disabled = true;
     setVoiceState("停止中", "運転モードを停止しました");
-  }
-
-  function startDrivingModeByVoice() {
-    voiceModeEnabled = true;
-    voiceStartBtn.disabled = true;
-    voiceStopBtn.disabled = false;
-    primeFirstSongForVoice();
-    startRecognition();
-    setVoiceState("待機中", "運転モードを開始しました", "listening");
+    return true;
   }
 
   function prepareSongSource(id) {
@@ -73,26 +66,8 @@
     return true;
   }
 
-  function primeFirstSongForVoice() {
-    if (!player || player.src || currentId || !songs.length) return;
-    const firstId = songs[0].id;
-    prepareSongSource(firstId);
-
-    const wasMuted = player.muted;
-    player.muted = true;
-    player.play()
-      .then(() => {
-        player.pause();
-        player.currentTime = 0;
-        player.muted = wasMuted;
-      })
-      .catch(() => {
-        player.muted = wasMuted;
-      });
-  }
-
   function resumePlayback() {
-    keepMusicVolume();
+    keepMusicAudible();
 
     if (!player.src) {
       const queue = activeQueue.length ? activeQueue : songs.map(item => item.id);
@@ -100,27 +75,15 @@
       if (nextId) prepareSongSource(nextId);
     }
 
-    if (player.src) {
-      player.play()
-        .then(() => setVoiceState("待機中", "再生しました", "listening"))
-        .catch(() => setVoiceState("待機中", "画面の再生ボタンを一度押してください", "listening"));
+    if (!player.src) {
+      setVoiceState("待機中", "再生できる曲がありません", "listening");
       return true;
     }
 
-    setVoiceState("待機中", "再生できる曲がありません", "listening");
+    player.play()
+      .then(() => setVoiceState("待機中", "再生しました", "listening"))
+      .catch(() => setVoiceState("待機中", "画面の再生ボタンを一度押してください", "listening"));
     return true;
-  }
-
-  function setRandomPlayback(enabled) {
-    shuffleMode = enabled;
-    localStorage.setItem("simple-music-shuffle", String(enabled));
-  }
-
-  function setLoopPlayback(enabled) {
-    if (!player) return;
-    player.loop = enabled;
-    localStorage.setItem("simple-music-loop-one", String(enabled));
-    setVoiceState("待機中", enabled ? "ループ再生 ON" : "ループ再生 OFF", "listening");
   }
 
   function findLooseMatch(items, getName, request) {
@@ -183,79 +146,8 @@
     return false;
   }
 
-  function volumeFromCommand(command) {
-    const direct = command.match(/(?:音量|ボリューム)(100|75|50|25|0|ゼロ|百|ひゃく|七十五|ななじゅうご|五十|ごじゅう|二十五|にじゅうご|半分)/);
-    if (!direct) return null;
-    const value = direct[1];
-    if (["100", "百", "ひゃく"].includes(value)) return 1;
-    if (["75", "七十五", "ななじゅうご"].includes(value)) return 0.75;
-    if (["50", "五十", "ごじゅう", "半分"].includes(value)) return 0.5;
-    if (["25", "二十五", "にじゅうご"].includes(value)) return 0.25;
-    if (["0", "ゼロ"].includes(value)) return 0;
-    return null;
-  }
-
-  function handleVolumeCommand(command) {
-    const specifiedVolume = volumeFromCommand(command);
-    if (specifiedVolume !== null) {
-      setPlayerVolume(specifiedVolume);
-      announceVolume();
-      return true;
-    }
-
-    if (command.includes("ミュート解除") || command.includes("消音解除")) {
-      player.muted = false;
-      announceVolume();
-      return true;
-    }
-
-    if (command.includes("ミュート") || command.includes("消音")) {
-      player.muted = true;
-      setVoiceState("待機中", "ミュートしました", "listening");
-      return true;
-    }
-
-    if (command.includes("音量最大") || command.includes("最大音量") || command.includes("音量マックス") || command.includes("ボリューム最大")) {
-      setPlayerVolume(1);
-      announceVolume();
-      return true;
-    }
-
-    if (command.includes("音量半分") || command.includes("半分") || command.includes("ボリューム半分")) {
-      setPlayerVolume(0.5);
-      announceVolume();
-      return true;
-    }
-
-    if (command.includes("音量ゼロ") || command.includes("音量0") || command.includes("ボリュームゼロ")) {
-      setPlayerVolume(0);
-      announceVolume();
-      return true;
-    }
-
-    if (
-      command.includes("音量上げ") ||
-      command.includes("音量あげ") ||
-      command.includes("音大きく") ||
-      command.includes("大きくして") ||
-      command.includes("ボリューム上げ") ||
-      command.includes("ボリュームあげ")
-    ) {
-      return changeVolume(0.25);
-    }
-
-    if (
-      command.includes("音量下げ") ||
-      command.includes("音量さげ") ||
-      command.includes("音小さく") ||
-      command.includes("小さくして") ||
-      command.includes("ボリューム下げ") ||
-      command.includes("ボリュームさげ")
-    ) {
-      return changeVolume(-0.25);
-    }
-
-    return false;
+  function hasAny(command, words) {
+    return words.some(word => command.includes(normalized(word)));
   }
 
   function isNextVoiceCommand(command) {
@@ -266,23 +158,28 @@
   }
 
   function isPreviousVoiceCommand(command) {
-    return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"].some(word => command === normalized(word) || command.includes(normalized(word)));
+    return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"]
+      .some(word => command === normalized(word) || command.includes(normalized(word)));
+  }
+
+  function isVolumeCommand(command) {
+    return hasAny(command, ["音量", "ボリューム", "ミュート", "消音", "大きく", "小さく", "上げ", "あげ", "下げ", "さげ"]);
   }
 
   function hasCancelWord(command) {
-    return ["解除", "取り消し", "取消", "やめ", "停止", "オフ", "off"].some(word => command.includes(normalized(word)));
+    return hasAny(command, ["解除", "取り消し", "取消", "やめ", "停止", "オフ", "off"]);
   }
 
   function isShuffleCancelCommand(command) {
     return (
       (command.includes("シャッフル") && hasCancelWord(command)) ||
-      ["順番再生", "順番に戻して", "通常再生", "普通に戻して", "元に戻して"].some(word => command.includes(normalized(word)))
+      hasAny(command, ["順番再生", "順番に戻して", "通常再生", "普通に戻して", "元に戻して"])
     );
   }
 
   function isRandomPickCommand(command) {
     if (command.includes("シャッフル") || hasCancelWord(command)) return false;
-    return ["ランダム", "無作為", "適当に", "おまかせ", "なんか選んで"].some(word => command.includes(normalized(word)));
+    return hasAny(command, ["ランダム", "無作為", "適当に", "おまかせ", "なんか選んで"]);
   }
 
   function playRandomSongOnce() {
@@ -291,7 +188,7 @@
       return true;
     }
 
-    setRandomPlayback(false);
+    setShuffleMode(false);
     activePlaylistId = null;
     activeQueue = songs.map(item => item.id);
 
@@ -305,35 +202,19 @@
   }
 
   function isResumeCommand(command) {
-    return ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"].some(word => command.includes(normalized(word)));
+    return hasAny(command, ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"]);
   }
 
   executeVoiceCommand = raw => {
-    keepMusicVolume();
+    keepMusicAudible();
     const command = normalized(raw);
 
-    if (
-      command.includes("運転モード開始") ||
-      command.includes("運転モードを開始") ||
-      command.includes("音声モード開始") ||
-      command.includes("マイクオン") ||
-      command.includes("マイクをオン")
-    ) {
-      startDrivingModeByVoice();
-      return true;
+    if (hasAny(command, ["運転モード開始", "運転モードを開始", "音声モード開始", "マイクオン", "マイクをオン"])) {
+      return startDrivingModeByVoice();
     }
 
-    if (
-      command.includes("運転モード停止") ||
-      command.includes("運転モードを停止") ||
-      command.includes("音声モード停止") ||
-      command.includes("音声停止") ||
-      command.includes("マイク停止") ||
-      command.includes("マイクオフ") ||
-      command.includes("マイクをオフ")
-    ) {
-      stopDrivingModeByVoice();
-      return true;
+    if (hasAny(command, ["運転モード停止", "運転モードを停止", "音声モード停止", "音声停止", "マイク停止", "マイクオフ", "マイクをオフ"])) {
+      return stopDrivingModeByVoice();
     }
 
     if (isNextVoiceCommand(command)) {
@@ -348,49 +229,33 @@
       return true;
     }
 
-    if (handleVolumeCommand(command)) return true;
-
-    if (command.includes("ループ解除") || command.includes("ループやめて") || command.includes("ループ停止")) {
-      setLoopPlayback(false);
+    if (isVolumeCommand(command)) {
+      setVoiceState("待機中", "音量は端末本体のボタンで調整してください", "listening");
       return true;
     }
 
-    if (command.includes("ループ")) {
-      setLoopPlayback(true);
-      return true;
-    }
+    if (hasAny(command, ["ループ解除", "ループやめて", "ループ停止", "ループオフ"])) return setLoopPlayback(false);
+    if (command.includes("ループ")) return setLoopPlayback(true);
 
     if (isShuffleCancelCommand(command)) {
-      setRandomPlayback(false);
+      setShuffleMode(false);
       setVoiceState("待機中", "シャッフルを解除しました", "listening");
       return true;
     }
 
     if (command.includes("シャッフル")) {
-      setRandomPlayback(true);
-      nextSong();
-      setVoiceState("待機中", "シャッフル再生", "listening");
+      setShuffleMode(true);
+      setVoiceState("待機中", "シャッフルをONにしました", "listening");
       return true;
     }
 
     if (isRandomPickCommand(command)) return playRandomSongOnce();
-
     if (playLooseNamedItem(raw)) return true;
     if (isResumeCommand(command)) return resumePlayback();
 
     return originalExecuteVoiceCommand(raw);
   };
 
-  if (voiceStartBtn) voiceStartBtn.addEventListener("click", () => {
-    keepMusicVolume();
-    const savedVolume = Number(localStorage.getItem("simple-music-volume"));
-    if (Number.isFinite(savedVolume)) setPlayerVolume(savedVolume);
-    primeFirstSongForVoice();
-  });
-
-  if (player) {
-    const savedVolume = Number(localStorage.getItem("simple-music-volume"));
-    if (Number.isFinite(savedVolume)) setPlayerVolume(savedVolume);
-    player.addEventListener("play", keepMusicVolume);
-  }
+  if (voiceStartBtn) voiceStartBtn.addEventListener("click", keepMusicAudible);
+  if (player) player.addEventListener("play", keepMusicAudible);
 })();
