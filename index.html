@@ -19,48 +19,42 @@
         <div class="logo">♪</div>
         <div>
           <h1>音楽アプリ</h1>
-          <p>ファイルから取り込んで再生</p>
+          <p>自分用プレイヤー</p>
         </div>
       </div>
-      <button id="importBtn" class="primary">ファイルから取り込む</button>
+      <button id="importBtn" class="primary">取り込む</button>
       <input id="filePicker" type="file" multiple hidden />
     </header>
 
-    <section class="now">
-      <div class="cover">♪</div>
-      <div class="now-info">
-        <p class="label">再生中</p>
-        <h2 id="nowTitle">まだ選択されていません</h2>
-      </div>
-      <audio id="player" controls></audio>
-      <div class="play-mode-controls" aria-label="再生モード">
-        <button id="shuffleBtn" class="mode-button" type="button" aria-pressed="false">🔀 シャッフル</button>
-        <button id="loopBtn" class="mode-button" type="button" aria-pressed="false">🔁 1曲ループ</button>
-      </div>
-    </section>
-
-    <section class="voice-panel" aria-labelledby="voiceTitle">
-      <div class="voice-head">
-        <div>
-          <p class="label">ハンズフリー操作</p>
-          <h2 id="voiceTitle">音声運転モード</h2>
+    <section class="control-grid">
+      <section class="now">
+        <div class="cover">♪</div>
+        <div class="now-info">
+          <p class="label">再生中</p>
+          <h2 id="nowTitle">まだ選択されていません</h2>
         </div>
-        <span id="voiceLamp" class="voice-lamp" aria-hidden="true"></span>
-      </div>
-      <p id="voiceStatus" class="voice-status">停止中</p>
-      <p id="voiceTranscript" class="voice-transcript"></p>
-      <div class="voice-actions">
-        <button id="voiceStartBtn" class="voice-start">🎤 音声運転モードを開始</button>
-        <button id="voiceStopBtn" class="secondary" disabled>停止</button>
-      </div>
-    </section>
+        <audio id="player" controls></audio>
+        <div class="play-mode-controls" aria-label="再生モード">
+          <button id="shuffleBtn" class="mode-button" type="button" aria-pressed="false">🔀 シャッフル</button>
+          <button id="loopBtn" class="mode-button" type="button" aria-pressed="false">🔁 1曲ループ</button>
+        </div>
+      </section>
 
-    <section class="playlist-panel">
-      <div class="list-head">
-        <h2>再生リスト</h2>
-        <button id="createPlaylistBtn" class="primary compact">＋ 新規作成</button>
-      </div>
-      <div id="playlistList" class="playlist-list"></div>
+      <section class="voice-panel" aria-labelledby="voiceTitle">
+        <div class="voice-head">
+          <div>
+            <p class="label">音声</p>
+            <h2 id="voiceTitle">運転モード</h2>
+          </div>
+          <span id="voiceLamp" class="voice-lamp" aria-hidden="true"></span>
+        </div>
+        <p id="voiceStatus" class="voice-status">停止中</p>
+        <p id="voiceTranscript" class="voice-transcript"></p>
+        <div class="voice-actions">
+          <button id="voiceStartBtn" class="voice-start">🎤 開始</button>
+          <button id="voiceStopBtn" class="secondary" disabled>停止</button>
+        </div>
+      </section>
     </section>
 
     <section class="toolbar">
@@ -70,12 +64,26 @@
 
     <section id="message" class="message" hidden></section>
 
-    <section>
+    <section class="library">
       <div class="list-head">
-        <h2>曲一覧</h2>
-        <span id="count">0曲</span>
+        <div>
+          <h2 id="libraryTitle">曲一覧</h2>
+          <span id="count">0曲</span>
+        </div>
+        <button id="createPlaylistBtn" class="primary compact">＋ リスト</button>
       </div>
-      <div id="songList" class="song-list"></div>
+
+      <div class="list-tabs" role="tablist" aria-label="一覧切り替え">
+        <button class="tab-button active" type="button" role="tab" aria-selected="true" data-tab="songs">曲</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="playlists">再生リスト</button>
+      </div>
+
+      <div id="songsPanel" class="tab-panel active" role="tabpanel">
+        <div id="songList" class="song-list"></div>
+      </div>
+      <div id="playlistsPanel" class="tab-panel" role="tabpanel" hidden>
+        <div id="playlistList" class="playlist-list"></div>
+      </div>
     </section>
   </main>
 
