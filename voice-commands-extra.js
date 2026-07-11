@@ -1,8 +1,6 @@
 (() => {
   if (typeof executeVoiceCommand !== "function") return;
 
-  const originalExecuteVoiceCommand = executeVoiceCommand;
-
   function normalized(text) {
     if (typeof normalizeVoiceText === "function") return normalizeVoiceText(text);
     return String(text || "").toLowerCase().normalize("NFKC").replace(/[、。,.!?！？\s]/g, "");
@@ -150,16 +148,20 @@
     return words.some(word => command.includes(normalized(word)));
   }
 
+  function equalsAny(command, words) {
+    return words.some(word => command === normalized(word));
+  }
+
   function isNextVoiceCommand(command) {
-    return [
-      "次", "つぎ", "次へ", "つぎへ", "次の曲", "つぎの曲", "次お願い", "次にして",
-      "ネクスト", "ねくすと", "next", "nextsong", "nexttrack"
-    ].some(word => command === normalized(word) || command.includes(normalized(word)));
+    return equalsAny(command, ["次", "つぎ", "次へ", "つぎへ", "次の曲", "つぎの曲", "ネクスト", "ねくすと", "next", "nextsong", "nexttrack"]);
   }
 
   function isPreviousVoiceCommand(command) {
-    return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"]
-      .some(word => command === normalized(word) || command.includes(normalized(word)));
+    return equalsAny(command, ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"]);
+  }
+
+  function isPauseCommand(command) {
+    return equalsAny(command, ["止めて", "停止", "一時停止", "ストップ", "stop", "pause"]);
   }
 
   function isVolumeCommand(command) {
@@ -201,7 +203,7 @@
   }
 
   function isResumeCommand(command) {
-    return hasAny(command, ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"]);
+    return equalsAny(command, ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて", "play", "start"]);
   }
 
   executeVoiceCommand = raw => {
@@ -225,6 +227,12 @@
     if (isPreviousVoiceCommand(command)) {
       previousSong();
       setVoiceState("待機中", "前の曲へ戻りました", "listening");
+      return true;
+    }
+
+    if (isPauseCommand(command)) {
+      player.pause();
+      setVoiceState("待機中", "停止しました", "listening");
       return true;
     }
 
@@ -252,7 +260,8 @@
     if (playLooseNamedItem(raw)) return true;
     if (isResumeCommand(command)) return resumePlayback();
 
-    return originalExecuteVoiceCommand(raw);
+    setVoiceState("待機中", `聞き取れませんでした：${raw}`, "listening");
+    return true;
   };
 
   if (voiceStartBtn) voiceStartBtn.addEventListener("click", keepMusicAudible);
