@@ -269,14 +269,39 @@
     return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"].some(word => command === normalized(word) || command.includes(normalized(word)));
   }
 
-  function isShuffleCancelCommand(command) {
-    const hasShuffleWord = command.includes("シャッフル") || command.includes("ランダム");
-    const hasCancelWord = ["解除", "取り消し", "取消", "やめ", "停止", "オフ", "off"].some(word => command.includes(normalized(word)));
+  function hasCancelWord(command) {
+    return ["解除", "取り消し", "取消", "やめ", "停止", "オフ", "off"].some(word => command.includes(normalized(word)));
+  }
 
+  function isShuffleCancelCommand(command) {
     return (
-      (hasShuffleWord && hasCancelWord) ||
+      (command.includes("シャッフル") && hasCancelWord(command)) ||
       ["順番再生", "順番に戻して", "通常再生", "普通に戻して", "元に戻して"].some(word => command.includes(normalized(word)))
     );
+  }
+
+  function isRandomPickCommand(command) {
+    if (command.includes("シャッフル") || hasCancelWord(command)) return false;
+    return ["ランダム", "無作為", "適当に", "おまかせ", "なんか選んで"].some(word => command.includes(normalized(word)));
+  }
+
+  function playRandomSongOnce() {
+    if (!songs.length) {
+      setVoiceState("待機中", "曲がありません", "listening");
+      return true;
+    }
+
+    setRandomPlayback(false);
+    activePlaylistId = null;
+    activeQueue = songs.map(item => item.id);
+
+    let candidates = songs;
+    if (songs.length > 1 && currentId) candidates = songs.filter(item => item.id !== currentId);
+
+    const song = candidates[Math.floor(Math.random() * candidates.length)];
+    playSong(song.id, activeQueue);
+    setVoiceState("待機中", `ランダム：${song.title}`, "listening");
+    return true;
   }
 
   function isResumeCommand(command) {
@@ -341,12 +366,14 @@
       return true;
     }
 
-    if (command.includes("ランダム") || command.includes("シャッフル")) {
+    if (command.includes("シャッフル")) {
       setRandomPlayback(true);
       nextSong();
-      setVoiceState("待機中", "ランダム再生", "listening");
+      setVoiceState("待機中", "シャッフル再生", "listening");
       return true;
     }
+
+    if (isRandomPickCommand(command)) return playRandomSongOnce();
 
     if (playLooseNamedItem(raw)) return true;
     if (isResumeCommand(command)) return resumePlayback();
