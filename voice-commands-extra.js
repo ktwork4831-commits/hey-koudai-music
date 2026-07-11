@@ -188,7 +188,6 @@
       return true;
     }
 
-    setShuffleMode(false);
     activePlaylistId = null;
     activeQueue = songs.map(item => item.id);
 
