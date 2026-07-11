@@ -269,6 +269,16 @@
     return ["前", "まえ", "前へ", "まえへ", "前の曲", "まえの曲", "バック", "戻って", "previous", "prev"].some(word => command === normalized(word) || command.includes(normalized(word)));
   }
 
+  function isShuffleCancelCommand(command) {
+    const hasShuffleWord = command.includes("シャッフル") || command.includes("ランダム");
+    const hasCancelWord = ["解除", "取り消し", "取消", "やめ", "停止", "オフ", "off"].some(word => command.includes(normalized(word)));
+
+    return (
+      (hasShuffleWord && hasCancelWord) ||
+      ["順番再生", "順番に戻して", "通常再生", "普通に戻して", "元に戻して"].some(word => command.includes(normalized(word)))
+    );
+  }
+
   function isResumeCommand(command) {
     return ["再生", "再生して", "流して", "かけて", "スタート", "続き", "続けて"].some(word => command.includes(normalized(word)));
   }
@@ -325,13 +335,9 @@
       return true;
     }
 
-    if (
-      command.includes("ランダム解除") ||
-      command.includes("ランダムやめて") ||
-      command.includes("ランダム停止")
-    ) {
+    if (isShuffleCancelCommand(command)) {
       setRandomPlayback(false);
-      setVoiceState("待機中", "ランダム再生を解除しました", "listening");
+      setVoiceState("待機中", "シャッフルを解除しました", "listening");
       return true;
     }
 
