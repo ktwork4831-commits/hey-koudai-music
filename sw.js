@@ -1,13 +1,15 @@
-const CACHE_NAME = "simple-music-import-noaccept-v18";
+const CACHE_NAME = "simple-music-import-noaccept-v19";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./voice-usability.css",
+  "./delete-button-fix.css",
   "./app.js",
   "./voice-fix.js",
   "./voice-commands-extra.js",
   "./playback-controls.js",
+  "./app-extras.js",
   "./manifest.webmanifest"
 ];
 
