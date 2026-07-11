@@ -16,12 +16,25 @@
     return true;
   }
 
+  function isVolumeCommand(command) {
+    return [
+      "音量", "ボリューム", "ミュート", "消音", "大きく", "小さく", "上げ", "あげ", "下げ", "さげ"
+    ].some(word => command.includes(word));
+  }
+
+  function guideDeviceVolume() {
+    setVoiceState("待機中", "音量は端末本体のボタンで調整してください", "listening");
+    return true;
+  }
+
   if (typeof executeVoiceCommand === "function") {
     const previousExecuteVoiceCommand = executeVoiceCommand;
     executeVoiceCommand = raw => {
       const command = typeof normalizeVoiceText === "function"
         ? normalizeVoiceText(raw)
         : String(raw || "").toLowerCase().normalize("NFKC").replace(/[、。,.!?！？\s]/g, "");
+
+      if (isVolumeCommand(command)) return guideDeviceVolume();
 
       if (["一覧", "全曲", "曲一覧", "全曲一覧", "全部", "全部の曲", "一覧に戻して", "全曲に戻して"].some(word => command.includes(word))) {
         return returnToAllSongs();
