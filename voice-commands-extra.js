@@ -2,6 +2,7 @@
   if (typeof executeVoiceCommand !== "function") return;
 
   const originalExecuteVoiceCommand = executeVoiceCommand;
+  const WAKE_WORDS = ["ヘイ", "へい", "hey"];
 
   function normalized(text) {
     if (typeof normalizeVoiceText === "function") return normalizeVoiceText(text);
@@ -13,6 +14,15 @@
       .replace(/(を)?(再生して|再生|流して|かけて|聞かせて|聴かせて)$/g, "")
       .replace(/(お願い|おねがい|して|ください|曲|音楽|プレイリスト|再生リスト)/g, "")
       .trim();
+  }
+
+  function wakeCommand(raw) {
+    const command = normalized(raw);
+    for (const word of WAKE_WORDS.map(normalized)) {
+      if (command === word) return "";
+      if (command.startsWith(word)) return command.slice(word.length);
+    }
+    return null;
   }
 
   function keepMusicAudible() {
@@ -37,7 +47,7 @@
     voiceStartBtn.disabled = true;
     voiceStopBtn.disabled = false;
     startRecognition();
-    setVoiceState("待機中", "運転モードを開始しました", "listening");
+    setVoiceState("待機中", "運転モードを開始しました。ヘイ、の後に命令してください", "listening");
     return true;
   }
 
@@ -216,43 +226,55 @@
       return stopDrivingModeByVoice();
     }
 
-    if (isNextVoiceCommand(command)) {
+    const spokenCommand = wakeCommand(raw);
+    if (spokenCommand === null) {
+      if (voiceModeEnabled) setVoiceState("待機中", "ヘイ、の後に命令してください", "listening");
+      return true;
+    }
+
+    if (!spokenCommand) {
+      setVoiceState("待機中", "命令を続けてください", "listening");
+      return true;
+    }
+
+    if (isNextVoiceCommand(spokenCommand)) {
       nextSong();
       setVoiceState("待機中", "次の曲へ進みました", "listening");
       return true;
     }
 
-    if (isPreviousVoiceCommand(command)) {
+    if (isPreviousVoiceCommand(spokenCommand)) {
       previousSong();
       setVoiceState("待機中", "前の曲へ戻りました", "listening");
       return true;
     }
 
-    if (isVolumeCommand(command)) {
+    if (isVolumeCommand(spokenCommand)) {
       setVoiceState("待機中", "音量は端末本体のボタンで調整してください", "listening");
       return true;
     }
 
-    if (hasAny(command, ["ループ解除", "ループやめて", "ループ停止", "ループオフ"])) return setLoopPlayback(false);
-    if (command.includes("ループ")) return setLoopPlayback(true);
+    if (hasAny(spokenCommand, ["ループ解除", "ループやめて", "ループ停止", "ループオフ"])) return setLoopPlayback(false);
+    if (spokenCommand.includes("ループ")) return setLoopPlayback(true);
 
-    if (isShuffleCancelCommand(command)) {
+    if (isShuffleCancelCommand(spokenCommand)) {
       setShuffleMode(false);
       setVoiceState("待機中", "シャッフルを解除しました", "listening");
       return true;
     }
 
-    if (command.includes("シャッフル")) {
+    if (spokenCommand.includes("シャッフル")) {
       setShuffleMode(true);
       setVoiceState("待機中", "シャッフルをONにしました", "listening");
       return true;
     }
 
-    if (isRandomPickCommand(command)) return playRandomSongOnce();
-    if (playLooseNamedItem(raw)) return true;
-    if (isResumeCommand(command)) return resumePlayback();
+    if (isRandomPickCommand(spokenCommand)) return playRandomSongOnce();
+    if (playLooseNamedItem(spokenCommand)) return true;
+    if (isResumeCommand(spokenCommand)) return resumePlayback();
 
-    return originalExecuteVoiceCommand(raw);
+    setVoiceState("待機中", `見つかりません：${raw}`, "listening");
+    return true;
   };
 
   if (voiceStartBtn) voiceStartBtn.addEventListener("click", keepMusicAudible);
