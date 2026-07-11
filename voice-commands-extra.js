@@ -116,6 +116,13 @@
     localStorage.setItem("simple-music-shuffle", String(enabled));
   }
 
+  function setLoopPlayback(enabled) {
+    if (!player) return;
+    player.loop = enabled;
+    localStorage.setItem("simple-music-loop-one", String(enabled));
+    setVoiceState("待機中", enabled ? "ループ再生 ON" : "ループ再生 OFF", "listening");
+  }
+
   function findLooseMatch(items, getName, request) {
     const cleaned = cleanRequest(request);
     if (cleaned.length < 2) return null;
@@ -176,7 +183,26 @@
     return false;
   }
 
+  function volumeFromCommand(command) {
+    const direct = command.match(/(?:音量|ボリューム)(100|75|50|25|0|ゼロ|百|ひゃく|七十五|ななじゅうご|五十|ごじゅう|二十五|にじゅうご|半分)/);
+    if (!direct) return null;
+    const value = direct[1];
+    if (["100", "百", "ひゃく"].includes(value)) return 1;
+    if (["75", "七十五", "ななじゅうご"].includes(value)) return 0.75;
+    if (["50", "五十", "ごじゅう", "半分"].includes(value)) return 0.5;
+    if (["25", "二十五", "にじゅうご"].includes(value)) return 0.25;
+    if (["0", "ゼロ"].includes(value)) return 0;
+    return null;
+  }
+
   function handleVolumeCommand(command) {
+    const specifiedVolume = volumeFromCommand(command);
+    if (specifiedVolume !== null) {
+      setPlayerVolume(specifiedVolume);
+      announceVolume();
+      return true;
+    }
+
     if (command.includes("ミュート解除") || command.includes("消音解除")) {
       player.muted = false;
       announceVolume();
@@ -215,7 +241,7 @@
       command.includes("ボリューム上げ") ||
       command.includes("ボリュームあげ")
     ) {
-      return changeVolume(0.15);
+      return changeVolume(0.25);
     }
 
     if (
@@ -226,7 +252,7 @@
       command.includes("ボリューム下げ") ||
       command.includes("ボリュームさげ")
     ) {
-      return changeVolume(-0.15);
+      return changeVolume(-0.25);
     }
 
     return false;
@@ -265,6 +291,16 @@
     }
 
     if (handleVolumeCommand(command)) return true;
+
+    if (command.includes("ループ解除") || command.includes("ループやめて") || command.includes("ループ停止")) {
+      setLoopPlayback(false);
+      return true;
+    }
+
+    if (command.includes("ループ")) {
+      setLoopPlayback(true);
+      return true;
+    }
 
     if (
       command.includes("ランダム解除") ||
