@@ -33,6 +33,10 @@
         <h2 id="nowTitle">まだ選択されていません</h2>
       </div>
       <audio id="player" controls></audio>
+      <div class="play-mode-controls" aria-label="再生モード">
+        <button id="shuffleBtn" class="mode-button" type="button" aria-pressed="false">🔀 シャッフル</button>
+        <button id="loopBtn" class="mode-button" type="button" aria-pressed="false">🔁 1曲ループ</button>
+      </div>
     </section>
 
     <section class="voice-panel" aria-labelledby="voiceTitle">
@@ -89,5 +93,6 @@
 
   <script src="./app.js"></script>
   <script src="./voice-fix.js"></script>
+  <script src="./playback-controls.js"></script>
 </body>
 </html>
