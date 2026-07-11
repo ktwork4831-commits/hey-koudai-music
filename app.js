@@ -186,6 +186,16 @@ filePicker.onchange=async()=>{
 };
 search.oninput=renderSongs;clearBtn.onclick=()=>{search.value="";renderSongs()};
 
+const tabButtons=document.querySelectorAll("[data-tab]");
+const tabPanels={songs:document.getElementById("songsPanel"),playlists:document.getElementById("playlistsPanel")};
+const libraryTitle=document.getElementById("libraryTitle");
+function showLibraryTab(tab){
+ tabButtons.forEach(button=>{const active=button.dataset.tab===tab;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});
+ Object.entries(tabPanels).forEach(([key,panel])=>{const active=key===tab;panel.hidden=!active;panel.classList.toggle("active",active)});
+ libraryTitle.textContent=tab==="playlists"?"再生リスト":"曲一覧";
+}
+tabButtons.forEach(button=>button.addEventListener("click",()=>showLibraryTab(button.dataset.tab)));
+
 if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
 openDB().then(database=>{db=database;loadPlaylists();refresh()});
 
