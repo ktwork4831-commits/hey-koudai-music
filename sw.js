@@ -1,4 +1,4 @@
-const CACHE_NAME = "simple-music-import-noaccept-v20";
+const CACHE_NAME = "simple-music-import-noaccept-v21";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,7 +10,8 @@ const ASSETS = [
   "./voice-commands-extra.js",
   "./playback-controls.js",
   "./app-extras.js",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./icons/app-icon.svg"
 ];
 
 self.addEventListener("install", event => {
