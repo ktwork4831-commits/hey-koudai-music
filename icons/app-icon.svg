@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="音楽アプリアイコン">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#120b2f"/>
+      <stop offset="0.48" stop-color="#151a3d"/>
+      <stop offset="1" stop-color="#071923"/>
+    </linearGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff3bd4"/>
+      <stop offset="0.45" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="170" cy="170" r="115" fill="#c026d3" opacity=".12" filter="url(#soft)"/>
+  <circle cx="350" cy="350" r="125" fill="#06b6d4" opacity=".12" filter="url(#soft)"/>
+  <g fill="none" stroke-linecap="round" filter="url(#glow)">
+    <path d="M92 274a165 165 0 0 1 34-102" stroke="#ff3bd4" stroke-width="11" opacity=".9"/>
+    <path d="M128 151a165 165 0 0 1 92-55" stroke="#a855f7" stroke-width="11" opacity=".9"/>
+    <path d="M290 88a165 165 0 0 1 119 83" stroke="#22d3ee" stroke-width="11" opacity=".9"/>
+    <path d="M422 212a165 165 0 0 1-25 150" stroke="#22d3ee" stroke-width="11" opacity=".9"/>
+    <path d="M375 390a165 165 0 0 1-131 50" stroke="#a855f7" stroke-width="11" opacity=".9"/>
+  </g>
+  <g opacity=".38" fill="none" stroke="url(#neon)" stroke-width="5">
+    <path d="M55 203c41-60 86-87 128-101"/>
+    <path d="M55 245c48-50 89-70 130-83"/>
+    <path d="M457 210c-42-55-86-79-128-93"/>
+    <path d="M456 253c-42-43-84-61-123-73"/>
+  </g>
+  <g filter="url(#glow)">
+    <path d="M245 142v184" stroke="url(#neon)" stroke-width="34" stroke-linecap="round"/>
+    <path d="M245 157l118-28v159" stroke="url(#neon)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <ellipse cx="210" cy="344" rx="52" ry="43" transform="rotate(-20 210 344)" fill="url(#neon)"/>
+    <ellipse cx="330" cy="304" rx="52" ry="43" transform="rotate(-20 330 304)" fill="url(#neon)"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="120" cy="121" r="5" opacity=".9"/>
+    <circle cx="402" cy="119" r="4" opacity=".8"/>
+    <circle cx="422" cy="357" r="5" opacity=".85"/>
+    <circle cx="100" cy="374" r="4" opacity=".8"/>
+  </g>
+  <rect x="5" y="5" width="502" height="502" rx="107" fill="none" stroke="url(#neon)" stroke-width="10" opacity=".8"/>
+</svg>
